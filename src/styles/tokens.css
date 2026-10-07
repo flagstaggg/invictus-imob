@@ -1,0 +1,16 @@
+:root {
+  --bg: #0b0d12;
+  --surface: #14171f;
+  --surface-2: #1b1f29;
+  --gold: #c9a96a;
+  --gold-light: #e0c896;
+  --text: #f2efe8;
+  --text-muted: #a8a49a;
+  --line: rgba(201, 169, 106, 0.28);
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --radius: 4px;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --header-h: 72px;
+  --transition: 0.35s ease;
+}
