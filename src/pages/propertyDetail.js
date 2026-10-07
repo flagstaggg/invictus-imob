@@ -1,12 +1,13 @@
-import { properties } from '../data/properties.js';
-import { formatPrice, formatArea, TYPE_LABELS } from '../utils/format.js';
+import { formatPrice, formatArea, TYPE_LABELS, imgSrc, imgAlt, escapeHtml } from '../utils/format.js';
 import { propertyCard } from '../components/propertyCard.js';
 import { openLightbox } from '../components/lightbox.js';
 import { buildWhatsAppUrl, propertyMessage } from '../utils/whatsapp.js';
 import { site } from '../data/site.js';
+import { fetchProperties } from '../utils/api.js';
 import { favoriteButtonHTML, initFavoriteButton } from '../components/favoriteButton.js';
 
-export function render(params) {
+export async function render(params) {
+  const properties = await fetchProperties();
   const p = properties.find((x) => x.id === params.id || x.slug === params.id);
   if (!p) {
     return `<section class="section page-head container"><h1>Imóvel não encontrado</h1><p><a class="btn btn--gold" href="#/imoveis">Voltar aos imóveis</a></p></section>`;
@@ -15,12 +16,12 @@ export function render(params) {
   return `
     <section class="section page-head">
       <div class="container">
-        <p class="eyebrow">${TYPE_LABELS[p.tipo]} · ${p.bairro}</p>
+        <p class="eyebrow">${TYPE_LABELS[p.tipo]} · ${escapeHtml(p.bairro)}</p>
         <div class="detail__title-row">
-          <h1>${p.titulo}</h1>
+          <h1>${escapeHtml(p.titulo)}</h1>
           ${favoriteButtonHTML(p.id)}
         </div>
-        <p class="detail__code">Código ${p.codigo} · ${p.bairro}, ${p.cidade} — SC</p>
+        <p class="detail__code">Código ${escapeHtml(p.codigo)} · ${escapeHtml(p.bairro)}, ${escapeHtml(p.cidade)} — SC</p>
       </div>
     </section>
     <section class="section section--compact">
@@ -28,18 +29,18 @@ export function render(params) {
         <div class="detail__main">
           <div class="gallery">
             <button class="gallery__main" data-lightbox="0">
-              <img src="${p.imagens[0]}" alt="${p.titulo} — foto principal" width="1600" height="1067" fetchpriority="high" />
+              <img src="${imgSrc(p.imagens[0])}" alt="${imgAlt(p.imagens[0], `${p.titulo} — foto principal`)}" width="1600" height="1067" fetchpriority="high" />
             </button>
             <div class="gallery__thumbs">
               ${p.imagens.map((src, i) => `
                 <button data-lightbox="${i}" aria-label="Ampliar foto ${i + 1}">
-                  <img src="${src.replace('w=1600', 'w=400')}" alt="${p.titulo} — miniatura ${i + 1}" width="400" height="267" loading="lazy" />
+                  <img src="${imgSrc(src).replace('w=1600', 'w=400')}" alt="${imgAlt(src, `${p.titulo} — miniatura ${i + 1}`)}" width="400" height="267" loading="lazy" />
                 </button>`).join('')}
             </div>
           </div>
 
           <h2>Sobre este imóvel</h2>
-          <p>${p.descricao}</p>
+          <p>${escapeHtml(p.descricao)}</p>
 
           <h2>Características</h2>
           <ul class="specs">
@@ -52,7 +53,7 @@ export function render(params) {
 
           <h2>Diferenciais</h2>
           <ul class="diferenciais">
-            ${p.diferenciais.map((d) => `<li>${d}</li>`).join('')}
+            ${p.diferenciais.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}
           </ul>
 
           <h2>Localização aproximada</h2>
@@ -82,11 +83,13 @@ export function render(params) {
     </section>`;
 }
 
-export function init(params) {
+export async function init(params) {
+  const properties = await fetchProperties();
   const p = properties.find((x) => x.id === params.id || x.slug === params.id);
   if (!p) return;
+  document.title = `${p.titulo} — Invictus Mobi`;
   document.querySelectorAll('[data-lightbox]').forEach((btn) => {
-    btn.addEventListener('click', () => openLightbox(p.imagens, Number(btn.dataset.lightbox), p.titulo));
+    btn.addEventListener('click', () => openLightbox(p.imagens.map(imgSrc), Number(btn.dataset.lightbox), p.titulo));
   });
   initFavoriteButton(p.id);
 }

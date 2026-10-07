@@ -33,6 +33,28 @@ O visitante pode marcar imóveis com a **estrela** (disponível apenas na págin
 - **Compartilhar:** na página de favoritos, o botão "Enviar meus favoritos ao consultor" abre o WhatsApp com a lista (código e título) pré-preenchida.
 - **Para limpar os dados:** no console do navegador, rode `localStorage.removeItem('invictus-mobi:favorites')`.
 
+## Área administrativa (/admin)
+
+O projeto inclui uma API (Node.js + Fastify), banco SQLite e um painel em `/admin` (carregado sob demanda). Para rodar tudo localmente:
+
+```bash
+npm install
+npm run migrate          # cria o banco (server/data/invictus.db)
+npm run seed             # importa os 12 imóveis iniciais para o banco
+npm run create-admin -- --email=voce@empresa.com --nome="Seu Nome" --senha="senha-forte-12+"
+npm run dev:api          # API em http://localhost:3333
+npm run dev              # front em http://localhost:5173 (proxy /api e /uploads → 3333)
+```
+
+- O painel existe em `#/admin`, mas **não é linkado** no site público.
+- Sem login, qualquer rota `/api/admin/*` retorna 401.
+- Segurança: senhas com bcrypt (custo 12), sessão em cookie httpOnly/Secure/SameSite=Strict com expiração por inatividade (30 min) e absoluta (12 h), rate limit no login, validação com zod, helmet, CORS restrito, upload validado por conteúdo (WebP via sharp), auditoria em `audit_log`.
+- O site público lê os imóveis de `GET /api/public/imoveis` (somente status `ativo`), com estados de carregamento/erro no estilo do site.
+
+## Deploy
+
+Veja `DEPLOY.md` (Debian + Docker + Nginx + Let's Encrypt) e o `Dockerfile`/`docker-compose.yml` prontos para uso. Backups com `server/scripts/backup.sh`.
+
 ## TODOs pendentes
 
 - [ ] Substituir todos os placeholders de `src/data/site.js` pelos dados reais da empresa (CRECI, CNPJ, endereço, telefone, e-mail, redes, domínio).

@@ -1,6 +1,6 @@
 import { renderFilters, initFilters } from '../components/filters.js';
 import { propertyCard } from '../components/propertyCard.js';
-import { properties } from '../data/properties.js';
+import { fetchProperties } from '../utils/api.js';
 
 const SORTS = [
   { value: 'relevancia', label: 'Relevância' },
@@ -9,7 +9,7 @@ const SORTS = [
   { value: 'recentes', label: 'Mais recentes' },
 ];
 
-function applyFilters(q) {
+function applyFilters(properties, q) {
   let list = [...properties];
   if (q.finalidade) list = list.filter((p) => p.finalidade === q.finalidade);
   if (q.tipo) list = list.filter((p) => p.tipo === q.tipo);
@@ -30,8 +30,10 @@ function applyFilters(q) {
   return list;
 }
 
-export function render(_params, q) {
-  const list = applyFilters(q);
+export async function render(_params, q) {
+  const properties = await fetchProperties();
+  const list = applyFilters(properties, q);
+  const bairros = [...new Set(properties.map((p) => p.bairro))].sort();
   return `
     <section class="section page-head">
       <div class="container">
@@ -41,7 +43,7 @@ export function render(_params, q) {
     </section>
     <section class="section section--compact">
       <div class="container">
-        ${renderFilters(q)}
+        ${renderFilters(q, bairros)}
         <div class="properties__head">
           <p class="properties__count" aria-live="polite">${list.length} ${list.length === 1 ? 'imóvel encontrado' : 'imóveis encontrados'}</p>
           <div class="field field--inline">

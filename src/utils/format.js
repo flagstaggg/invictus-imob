@@ -9,6 +9,21 @@ export function formatArea(value) {
   return `${new Intl.NumberFormat('pt-BR').format(value)} m²`;
 }
 
+// Escapa texto vindo do banco antes de inserir em HTML (defesa contra XSS).
+export function escapeHtml(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+
+// Imagens podem ser string (legado) ou { src, alt }
+export function imgSrc(x) {
+  return typeof x === 'string' ? x : x?.src;
+}
+export function imgAlt(x, fallback) {
+  return typeof x === 'string' ? fallback : (x?.alt || fallback);
+}
+
 export const TYPE_LABELS = {
   casa: 'Casa',
   apartamento: 'Apartamento',

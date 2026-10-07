@@ -13,6 +13,7 @@ const routes = [
   { pattern: '/imovel/:id', title: 'Imóvel — Invictus Mobi', load: () => import('./pages/propertyDetail.js') },
   { pattern: '/contato', title: 'Contato — Invictus Mobi', load: () => import('./pages/contact.js') },
   { pattern: '/favoritos', title: 'Favoritos — Invictus Mobi', noindex: true, load: () => import('./pages/favorites.js') },
+  { pattern: '/admin', title: 'Painel — Invictus Mobi', noindex: true, load: () => import('./pages/admin/index.js') },
 ];
 
 export function currentPath() { return path; }
@@ -64,8 +65,13 @@ export async function renderRoute() {
   } else {
     const mod = await route.load();
     document.title = route.title;
-    main.innerHTML = mod.render(params, query);
-    if (mod.init) mod.init(params, query);
+    main.innerHTML = '<section class="section page-head"><div class="container"><p class="eyebrow">Carregando…</p></div></section>';
+    try {
+      main.innerHTML = await Promise.resolve(mod.render(params, query));
+      if (mod.init) await Promise.resolve(mod.init(params, query));
+    } catch {
+      main.innerHTML = '<section class="section page-head"><div class="container"><h1>Não foi possível carregar</h1><p style="color:var(--text-muted)">Verifique sua conexão e tente novamente.</p><p><a class="btn btn--gold" href="#/">Voltar ao início</a></p></div></section>';
+    }
     const robots = document.querySelector('meta[name="robots"]');
     if (route.noindex) {
       if (robots) robots.content = 'noindex';

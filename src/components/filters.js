@@ -1,9 +1,6 @@
 import { TYPE_LABELS, PRICE_RANGES } from '../utils/format.js';
-import { properties } from '../data/properties.js';
 
-const BAIRROS = [...new Set(properties.map((p) => p.bairro))].sort();
-
-export function renderFilters(q) {
+export function renderFilters(q, bairros = []) {
   return `
     <form class="filters" id="filters" aria-label="Filtrar imóveis">
       <div class="field">
@@ -25,7 +22,7 @@ export function renderFilters(q) {
         <label for="f-bairro">Bairro</label>
         <select id="f-bairro" name="bairro">
           <option value="">Todos</option>
-          ${BAIRROS.map((b) => `<option value="${b}" ${q.bairro === b ? 'selected' : ''}>${b}</option>`).join('')}
+          ${bairros.map((b) => `<option value="${b}" ${q.bairro === b ? 'selected' : ''}>${b}</option>`).join('')}
         </select>
       </div>
       <div class="field">

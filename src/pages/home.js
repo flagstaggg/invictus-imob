@@ -2,8 +2,9 @@ import { renderHero, initHero } from '../components/hero.js';
 import { propertyCard } from '../components/propertyCard.js';
 import { renderContactForm, initContactForm } from '../components/contactForm.js';
 import { initCarousel } from '../components/carousel.js';
-import { properties, neighborhoods } from '../data/properties.js';
+import { neighborhoods } from '../data/properties.js';
 import { site } from '../data/site.js';
+import { fetchProperties } from '../utils/api.js';
 
 const SERVICOS = [
   { titulo: 'Venda de imóveis de alto padrão', texto: 'Intermediação completa, do anúncio ao registro, com sigilo e eficiência.' },
@@ -20,7 +21,8 @@ const DEPOIMENTOS = [
   { texto: 'Compramos estando fora do estado e tudo foi conduzido com transparência e agilidade.', autor: 'Cliente — família em mudança para Santa Catarina' },
 ];
 
-export function render() {
+export async function render() {
+  const properties = await fetchProperties();
   const destaques = properties.filter((p) => p.destaque);
   return `
     ${renderHero()}

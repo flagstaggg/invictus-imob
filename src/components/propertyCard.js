@@ -1,4 +1,4 @@
-import { formatPrice, formatArea, TYPE_LABELS } from '../utils/format.js';
+import { formatPrice, formatArea, TYPE_LABELS, imgSrc, imgAlt, escapeHtml } from '../utils/format.js';
 import { icons } from '../utils/icons.js';
 
 export function propertyCard(p) {
@@ -6,13 +6,13 @@ export function propertyCard(p) {
     <article class="card reveal">
       <a class="card__link" href="#/imovel/${p.slug}">
         <div class="card__media">
-          <img src="${p.imagens[0]}" alt="${p.titulo} — ${TYPE_LABELS[p.tipo]} em ${p.bairro}" width="1600" height="1067" loading="lazy" />
+          <img src="${imgSrc(p.imagens[0])}" alt="${imgAlt(p.imagens[0], `${p.titulo} — ${TYPE_LABELS[p.tipo]} em ${p.bairro}`)}" width="1600" height="1067" loading="lazy" />
           ${p.destaque ? '<span class="badge">Exclusivo</span>' : ''}
         </div>
         <div class="card__body">
           <p class="card__type">${TYPE_LABELS[p.tipo]} · ${p.finalidade === 'venda' ? 'Comprar' : 'Alugar'}</p>
-          <h3 class="card__title">${p.titulo}</h3>
-          <p class="card__bairro">${p.bairro} · ${p.cidade}, SC</p>
+          <h3 class="card__title">${escapeHtml(p.titulo)}</h3>
+          <p class="card__bairro">${escapeHtml(p.bairro)} · ${escapeHtml(p.cidade)}, SC</p>
           <p class="card__price">${formatPrice(p.preco, p.finalidade)}</p>
           <ul class="card__meta">
             ${p.quartos ? `<li>${icons.quartos}<span>${p.quartos} quartos</span></li>` : ''}

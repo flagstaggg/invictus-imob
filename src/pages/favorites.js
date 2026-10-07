@@ -1,17 +1,18 @@
-import { properties } from '../data/properties.js';
 import { getFavorites, subscribe } from '../utils/favorites.js';
+import { fetchProperties } from '../utils/api.js';
 import { propertyCard } from '../components/propertyCard.js';
 import { buildWhatsAppUrl, favoritesMessage } from '../utils/whatsapp.js';
 
 let unsubscribe = null;
 
-function favoriteProperties() {
+async function favoriteProperties() {
   const ids = getFavorites();
-  return ids.map((id) => properties.find((p) => p.id === id)).filter(Boolean);
+  const list = await fetchProperties();
+  return ids.map((id) => list.find((p) => p.id === id)).filter(Boolean);
 }
 
-export function render() {
-  const list = favoriteProperties();
+export async function render() {
+  const list = await favoriteProperties();
   return `
     <section class="section page-head">
       <div class="container">
@@ -46,10 +47,9 @@ function renderResults(list) {
 
 export function init() {
   unsubscribe?.();
-  unsubscribe = subscribe(() => {
+  unsubscribe = subscribe(async () => {
     const container = document.getElementById('favorites-results');
-    if (container) container.innerHTML = renderResults(favoriteProperties());
-    // re-observa os cards re-renderizados para o efeito reveal
+    if (container) container.innerHTML = renderResults(await favoriteProperties());
     import('../utils/observers.js').then((m) => m.initReveal());
   });
 }
