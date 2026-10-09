@@ -9,6 +9,8 @@ import { initRouter } from './router.js';
 import { initSmoothScroll } from './utils/smoothScroll.js';
 import { initFavoritesSync } from './utils/favorites.js';
 
+
+// Renderiza asdknasdka
 initSmoothScroll();
 initFavoritesSync();
 renderHeader();
