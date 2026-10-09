@@ -1,20 +1,15 @@
 // Store isolado de favoritos: único ponto que toca localStorage.
 // Chave pública: 'invictus-mobi:favorites' (array de IDs, nunca objetos completos).
-import { properties } from '../data/properties.js';
+// Os dados vêm do banco via API pública (src/utils/api.js) através das páginas.
 
 const KEY = 'invictus-mobi:favorites';
 const listeners = new Set();
 let memoryFallback = null; // usado quando localStorage falha (modo anônimo, quota cheia etc.)
 let storageListenerReady = false;
 
-function knownIds() {
-  return new Set(properties.map((p) => p.id));
-}
-
 function validIds(list) {
   if (!Array.isArray(list)) return [];
-  const known = knownIds();
-  return [...new Set(list.filter((id) => typeof id === 'string' && known.has(id)))];
+  return [...new Set(list.filter((id) => typeof id === 'string' && id.length > 0))];
 }
 
 function write(list) {
@@ -61,7 +56,7 @@ export function isFavorite(id) {
 
 export function addFavorite(id) {
   const list = getFavorites();
-  if (!list.includes(id) && knownIds().has(id)) {
+  if (!list.includes(id) && typeof id === 'string' && id) {
     list.push(id);
     write(list);
     notify();

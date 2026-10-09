@@ -197,10 +197,10 @@ footer a:hover { color: var(--gold-light); }
 .gallery__thumbs button { border: 1px solid transparent; padding: 0; background: none; }
 .gallery__thumbs button:hover { border-color: var(--gold); }
 .gallery__thumbs img { aspect-ratio: 3 / 2; object-fit: cover; border-radius: 2px; }
-.specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 1.5rem 0; }
+.specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 1.5rem 0; }
 .specs li { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; text-align: center; }
-.specs strong { display: block; font-family: var(--font-serif); font-size: 1.4rem; color: var(--gold-light); }
-.specs span { font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); }
+.specs strong { display: block; font-family: var(--font-serif); font-size: clamp(1.05rem, 2vw, 1.4rem); color: var(--gold-light); overflow-wrap: anywhere; }
+.specs span { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .diferenciais { list-style: none; padding: 0; display: grid; gap: 0.4rem; color: var(--text-muted); }
 .diferenciais li::before { content: '—'; color: var(--gold); margin-right: 0.5rem; }
 .detail-card {

@@ -44,11 +44,14 @@ export async function render(params) {
 
           <h2>Características</h2>
           <ul class="specs">
-            <li><strong>${formatArea(p.area)}</strong><span>Área</span></li>
+            ${p.area ? `<li><strong>${formatArea(p.area)}</strong><span>Área total</span></li>` : ''}
+            ${p.areaConstruida ? `<li><strong>${formatArea(p.areaConstruida)}</strong><span>Área construída</span></li>` : ''}
             ${p.quartos ? `<li><strong>${p.quartos}</strong><span>Quartos</span></li>` : ''}
             ${p.suites ? `<li><strong>${p.suites}</strong><span>Suítes</span></li>` : ''}
-            <li><strong>${p.banheiros}</strong><span>Banheiros</span></li>
-            <li><strong>${p.vagas}</strong><span>Vagas</span></li>
+            ${p.banheiros ? `<li><strong>${p.banheiros}</strong><span>Banheiros</span></li>` : ''}
+            ${p.vagas ? `<li><strong>${p.vagas}</strong><span>Vagas</span></li>` : ''}
+            ${p.condominio ? `<li><strong>R$ ${p.condominio.toLocaleString('pt-BR')}</strong><span>Condomínio/mês</span></li>` : ''}
+            ${p.iptu ? `<li><strong>R$ ${p.iptu.toLocaleString('pt-BR')}</strong><span>IPTU/ano</span></li>` : ''}
           </ul>
 
           <h2>Diferenciais</h2>
