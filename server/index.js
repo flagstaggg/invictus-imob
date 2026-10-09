@@ -9,7 +9,7 @@ import staticPlugin from '@fastify/static';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { migrate } from './db/index.js';
+import { migrate, pool } from './db/index.js';
 import { UPLOADS_DIR } from './routes/adminImoveis.js';
 import publicRoutes from './routes/public.js';
 import adminAuthRoutes from './routes/adminAuth.js';
@@ -63,12 +63,24 @@ await app.register(staticPlugin, {
   decorateReply: false,
 });
 
-// CSRF leve: toda mutação deve vir do mesmo origin do host
+// CSRF leve: toda mutação deve vir do próprio host (mesma origem) ou de uma origem autorizada
+const isDev = process.env.NODE_ENV !== 'production';
+const loopback = (origin) => {
+  try {
+    const u = new URL(origin);
+    return u.protocol === 'http:' && ['localhost', '127.0.0.1', '::1'].includes(u.hostname);
+  } catch { return false; }
+};
+
 app.addHook('onRequest', async (req, reply) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && req.url.startsWith('/api/admin')) {
     const origin = req.headers.origin;
-    if (origin && !allowed.some((o) => origin.startsWith(o))) {
-      return reply.code(403).send({ erro: 'Origem não permitida' });
+    if (origin) {
+      const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+      let sameOrigin = false;
+      try { sameOrigin = host !== '' && new URL(origin).host === host; } catch { sameOrigin = false; }
+      const permitted = sameOrigin || allowed.some((o) => origin.startsWith(o)) || (isDev && loopback(origin));
+      if (!permitted) return reply.code(403).send({ erro: 'Origem não permitida' });
     }
   }
 });
@@ -78,18 +90,20 @@ app.addHook('onSend', async (req, reply) => {
   if (req.url.startsWith('/api/admin')) reply.header('X-Robots-Tag', 'noindex, nofollow');
 });
 
-migrate();
-
 await app.register(publicRoutes);
 await app.register(adminAuthRoutes);
 await app.register(adminImoveisRoutes);
 await app.register(adminUsuariosRoutes);
+
+await migrate();
 
 app.setErrorHandler((err, req, reply) => {
   req.log.error(err);
   if (err.statusCode === 429) return reply.code(429).send({ erro: 'Muitas tentativas. Aguarde alguns minutos.' });
   reply.code(err.statusCode || 500).send({ erro: err.statusCode ? err.message : 'Erro interno' });
 });
+
+app.addHook('onClose', async () => { await pool.end(); });
 
 app.listen({ port: PORT, host: '0.0.0.0' }).then(() => {
   console.log(`API rodando em http://localhost:${PORT}`);

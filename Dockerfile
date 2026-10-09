@@ -1,3 +1,9 @@
+# .env precisa conter também:
+# POSTGRES_DB=invictus
+# POSTGRES_USER=invictus_app
+# POSTGRES_PASSWORD=<senha forte>
+# DATABASE_URL=postgres://invictus_app:<senha forte>@db:5432/invictus
+
 # ---- Build do front ----
 FROM node:24-slim AS build
 WORKDIR /app

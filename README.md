@@ -4,16 +4,60 @@ Site institucional e vitrine de imóveis da **Invictus Mobi**, imobiliária de l
 
 ## Como rodar
 
+**Site público (Vite):**
+
 ```bash
 npm install
-npm run dev        # ambiente de desenvolvimento
+npm run dev        # ambiente de desenvolvimento (http://localhost:5173)
 npm run build      # build de produção em dist/
 npm run preview    # serve o build de produção
 ```
 
+**API + banco (PostgreSQL):**
+
+```bash
+# 1. Banco (ajuste os comandos abaixo se o Postgres estiver em outro local)
+createuser invictus_app --pwprompt        # senha do usuário da aplicação
+createdb invictus --owner invictus_app
+
+# 2. Configure a conexão
+cp .env.example .env                      # e edite DATABASE_URL
+
+# 3. Migrações, dados iniciais e primeiro admin
+npm run migrate
+npm run seed                              # importa os imóveis de src/data/properties.js
+npm run create-admin -- --email=voce@empresa.com --nome="Seu Nome" --senha="senha-forte-12+"
+
+# 4. Suba a API
+npm run dev:api                           # http://localhost:3333
+```
+
+O painel fica em `http://localhost:5173/#/admin` (não é linkado no site público).
+
+### Comandos úteis
+
+| Comando | O que faz |
+|---|---|
+| `npm run migrate` | Aplica as migrações em `server/db/migrations` |
+| `npm run seed` | Importa imóveis do arquivo de dados para o banco (idempotente) |
+| `npm run create-admin -- ...` | Cria um administrador pela linha de comando |
+| `npm run db:export-sqlite` | **Legado:** exporta o banco SQLite para JSON |
+| `npm run db:import-sqlite -- server/data/sqlite-export.json` | **Legado:** importa esse JSON no PostgreSQL |
+
 ## Tecnologias
 
-Vite 8, JavaScript puro (ES modules), roteamento por hash feito à mão, CSS moderno (variáveis, Grid, Flexbox, `clamp()`), sem frameworks nem bibliotecas de componentes. Única dependência externa de runtime: fontes do Google Fonts.
+- **Front:** Vite 8, JavaScript puro (ES modules), roteamento por hash feito à mão, CSS moderno (variáveis, Grid, Flexbox, `clamp()`), sem frameworks. Fontes do Google Fonts.
+- **Back-end:** Node.js + Fastify, validação com zod, `bcryptjs` (custo 12), `sharp` para imagens, `helmet`, rate limiting.
+- **Banco:** **PostgreSQL** com o ORM **Drizzle ORM** (`drizzle-orm` + `pg`). Schema declarativo em `server/db/schema.js`; migrações versionadas em SQL (`server/db/migrations`), aplicadas por `npm run migrate` dentro de transação.
+- **Imagens:** upload em disco (`server/uploads`), convertidas para WebP em 3 tamanhos e sem metadados EXIF.
+
+## Sanitização de entradas (dupla camada)
+
+1. **Na entrada (servidor):** todo dado passa por `sanitizeText()`/`sanitizeEmail()` em `server/utils/schemas.js` **antes** da validação do zod — remove tags HTML, caracteres de controle, normaliza espaços e aplica limites de tamanho por campo.
+2. **Na saída (front):** o front escapa todo texto vindo do banco (`escapeHtml` em `src/utils/format.js`).
+3. **No banco:** todas as queries são geradas pelo Drizzle com **parâmetros vinculados** — nunca concatenação de SQL (imune a SQL injection).
+
+Exemplo real: título `  <script>alert(1)</script>Casa Teste ORM  ` é gravado como `alert(1)Casa Teste ORM`; descrição mantém quebras de linha, mas descarta o caractere de controle.
 
 ## Como editar os dados
 
@@ -35,25 +79,27 @@ O visitante pode marcar imóveis com a **estrela** (disponível apenas na págin
 
 ## Área administrativa (/admin)
 
-O projeto inclui uma API (Node.js + Fastify), banco SQLite e um painel em `/admin` (carregado sob demanda). Para rodar tudo localmente:
+O projeto inclui uma API (Node.js + Fastify), banco **PostgreSQL** e um painel em `/admin` (carregado sob demanda). O banco já é criado pelas migrações — veja "API + banco (PostgreSQL)" no topo. Resumo rápido:
 
 ```bash
 npm install
-npm run migrate          # cria o banco (server/data/invictus.db)
-npm run seed             # importa os 12 imóveis iniciais para o banco
+cp .env.example .env    # ajuste DATABASE_URL
+npm run migrate
+npm run seed
 npm run create-admin -- --email=voce@empresa.com --nome="Seu Nome" --senha="senha-forte-12+"
-npm run dev:api          # API em http://localhost:3333
-npm run dev              # front em http://localhost:5173 (proxy /api e /uploads → 3333)
+npm run dev:api         # API em http://localhost:3333
+npm run dev             # front em http://localhost:5173 (proxy /api e /uploads → 3333)
 ```
 
 - O painel existe em `#/admin`, mas **não é linkado** no site público.
 - Sem login, qualquer rota `/api/admin/*` retorna 401.
-- Segurança: senhas com bcrypt (custo 12), sessão em cookie httpOnly/Secure/SameSite=Strict com expiração por inatividade (30 min) e absoluta (12 h), rate limit no login, validação com zod, helmet, CORS restrito, upload validado por conteúdo (WebP via sharp), auditoria em `audit_log`.
+- Segurança: senhas com bcrypt (custo 12), sessão em cookie httpOnly/Secure/SameSite=Strict com expiração por inatividade (30 min) e absoluta (12 h), rate limit no login, validação com zod + sanitização, helmet, CORS restrito, upload validado por conteúdo (WebP via sharp), auditoria em `audit_log`.
 - O site público lê os imóveis de `GET /api/public/imoveis` (somente status `ativo`), com estados de carregamento/erro no estilo do site.
+- O usuário do banco (`invictus_app`) é criado sem privilégios administrativos; o acesso do Postgres fica restrito à rede interna.
 
 ## Deploy
 
-Veja `DEPLOY.md` (Debian + Docker + Nginx + Let's Encrypt) e o `Dockerfile`/`docker-compose.yml` prontos para uso. Backups com `server/scripts/backup.sh`.
+Veja `DEPLOY.md` (Debian + Docker + Nginx + PostgreSQL + Let's Encrypt) e o `Dockerfile`/`docker-compose.yml` prontos para uso (o compose já sobe o Postgres em container sem portas publicadas). Backups com `server/scripts/backup.sh` (`pg_dump` + fotos, retenção de 14 dias).
 
 ## TODOs pendentes
 

@@ -10,9 +10,12 @@
     "dev:api": "node server/index.js",
     "migrate": "node server/db/index.js",
     "seed": "node server/scripts/seed.js",
-    "create-admin": "node server/scripts/create-admin.js"
+    "create-admin": "node server/scripts/create-admin.js",
+    "db:export-sqlite": "node server/scripts/export-sqlite.js",
+    "db:import-sqlite": "node server/scripts/import-sqlite-dump.js"
   },
   "devDependencies": {
+    "better-sqlite3": "^13.0.3",
     "vite": "^8.3.0"
   },
   "dependencies": {
@@ -23,11 +26,11 @@
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/static": "^10.1.5",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
     "dotenv": "^18.0.6",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.5",
     "lenis": "^1.3.26",
+    "pg": "^8.23.1",
     "sharp": "^0.35.5",
     "zod": "^4.6.5"
   }

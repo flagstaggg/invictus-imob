@@ -1,14 +1,31 @@
 services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-invictus}
+      POSTGRES_USER: ${POSTGRES_USER:-invictus_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-invictus_app} -d ${POSTGRES_DB:-invictus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # sem portas publicadas: o banco só é acessível pela rede interna do Docker
+
   app:
     build: .
     env_file: .env
     restart: unless-stopped
     volumes:
-      - ./data:/app/server/data
       - ./uploads:/app/server/uploads
-    # não expõe porta para fora; apenas o nginx conversa com ele
     expose:
       - "3333"
+    depends_on:
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine
@@ -22,3 +39,6 @@ services:
       - ./certbot/conf:/etc/letsencrypt
     depends_on:
       - app
+
+volumes:
+  pgdata:

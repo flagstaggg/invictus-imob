@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { db } from '../db/index.js';
+import { users } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import { loginSchema, trocarSenhaSchema } from '../utils/schemas.js';
 import { createSession, destroySession, requireAuth } from '../utils/auth.js';
 import { audit } from '../utils/audit.js';
@@ -19,21 +21,20 @@ export default async function adminAuthRoutes(app) {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ erro: 'Dados inválidos' });
     const { email, senha } = parsed.data;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    const ok = user && user.ativo && (await bcrypt.compare(senha, user.senha_hash));
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const ok = user && user.ativo && (await bcrypt.compare(senha, user.senhaHash));
     if (!ok) {
-      audit(null, 'login_falhou', null, { email });
+      await audit(null, 'login_falhou', null, { email });
       return reply.code(401).send({ erro: 'E-mail ou senha inválidos' });
     }
-    const sid = createSession(user.id, req.headers['user-agent'] || '');
+    const sid = await createSession(user.id, req.headers['user-agent'] || '');
     reply.setCookie('session', sid, COOKIE_OPTS);
-    audit(user.id, 'login');
-    return { ok: true, trocarSenha: !!user.trocar_senha, role: user.role };
+    await audit(user.id, 'login');
+    return { ok: true, trocarSenha: user.trocaSenha, role: user.role };
   });
 
   app.post('/api/admin/logout', async (req, reply) => {
-    const sid = req.cookies?.session;
-    destroySession(sid);
+    await destroySession(req.cookies?.session);
     reply.clearCookie('session', { path: '/' });
     return { ok: true };
   });
@@ -42,15 +43,13 @@ export default async function adminAuthRoutes(app) {
 
   app.post('/api/admin/trocar-senha', { preHandler: requireAuth() }, async (req, reply) => {
     const parsed = trocarSenhaSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return reply.code(400).send({ erro: parsed.error.issues[0]?.message || 'Dados inválidos' });
-    }
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    const ok = await bcrypt.compare(parsed.data.senhaAtual, user.senha_hash);
+    if (!parsed.success) return reply.code(400).send({ erro: parsed.error.issues[0]?.message || 'Dados inválidos' });
+    const [user] = await db.select().from(users).where(eq(users.id, req.user.id)).limit(1);
+    const ok = await bcrypt.compare(parsed.data.senhaAtual, user.senhaHash);
     if (!ok) return reply.code(400).send({ erro: 'Senha atual incorreta' });
     const hash = await bcrypt.hash(parsed.data.novaSenha, 12);
-    db.prepare('UPDATE users SET senha_hash = ?, trocar_senha = 0 WHERE id = ?').run(hash, user.id);
-    audit(user.id, 'trocou_senha');
+    await db.update(users).set({ senhaHash: hash, trocaSenha: false }).where(eq(users.id, user.id));
+    await audit(user.id, 'trocou_senha');
     return { ok: true };
   });
 }

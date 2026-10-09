@@ -1,6 +1,6 @@
 # Deploy na VPS (Debian + Docker) — guia para iniciantes
 
-Este guia leva o site do zero até rodar em uma VPS Debian com Docker, Nginx e HTTPS.
+Este guia leva o site do zero até rodar em uma VPS Debian com Docker, Nginx, PostgreSQL e HTTPS.
 
 ## 1. Preparar o servidor
 
@@ -37,16 +37,30 @@ Este guia leva o site do zero até rodar em uma VPS Debian com Docker, Nginx e H
 ```bash
 git clone SEU_REPO /var/www/invictus && cd /var/www/invictus
 cp .env.example .env
-nano .env   # preencha COOKIE_SECRET com uma string aleatória longa
+nano .env
 ```
 
-Edite `nginx.conf` trocando `SEU_DOMINIO.com.br` pelo seu domínio.
+Preencha no `.env`:
+
+```
+POSTGRES_DB=invictus
+POSTGRES_USER=invictus_app
+POSTGRES_PASSWORD=<senha forte gerada com: openssl rand -base64 24>
+DATABASE_URL=postgres://invictus_app:<mesma senha>@db:5432/invictus
+COOKIE_SECRET=<outro segredo: openssl rand -hex 32>
+CORS_ORIGIN=https://SEU_DOMINIO.com.br
+NODE_ENV=production
+```
+
+Edite `nginx.conf` trocando `SEU_DOMINIO.com.br` pelo seu domínio e suba:
 
 ```bash
 docker compose up -d --build
 docker compose exec app node server/scripts/seed.js
 docker compose exec app node server/scripts/create-admin.js --email=voce@empresa.com --nome="Seu Nome" --senha="senha-forte-12+"
 ```
+
+O banco PostgreSQL roda em um container interno (`db`), **sem porta publicada**: só a rede do Docker alcança ele.
 
 ## 3. HTTPS (obrigatório para o login do painel)
 
@@ -56,7 +70,7 @@ Os cookies de sessão são `Secure`: sem HTTPS o login do painel não funciona.
 docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d SEU_DOMINIO.com.br -d www.SEU_DOMINIO.com.br
 ```
 
-Depois edite `nginx.conf` trocando o bloco HTTP pelo HTTPS:
+Depois troque o bloco HTTP do `nginx.conf` por HTTPS:
 
 ```nginx
 server {
@@ -75,25 +89,32 @@ server {
 }
 ```
 
-Adicione ao `docker-compose.yml` um serviço certbot (imagem `certbot/certbot`) e renove com cron: `0 3 * * 1 docker compose run --rm certbot renew && docker compose exec nginx nginx -s reload`.
+Adicione ao `docker-compose.yml` um serviço `certbot` (imagem `certbot/certbot`) e renove semanalmente no cron:
+`0 3 * * 1 docker compose run --rm certbot renew && docker compose exec nginx nginx -s reload`.
 
-No `.env`, ajuste `CORS_ORIGIN=https://SEU_DOMINIO.com.br` e reinicie: `docker compose up -d`.
-
-## 4. Backups
+## 4. Backups do banco e das fotos
 
 ```bash
 chmod +x server/scripts/backup.sh
 crontab -e
-# adicione: 0 3 * * * /var/www/invictus/server/scripts/backup.sh
+# 0 3 * * * PGPASSWORD=<senha> PGUSER=invictus_app PGDATABASE=invictus PGHOST=localhost /var/www/invictus/server/scripts/backup.sh
 ```
 
-Para restaurar: copie `invictus-AAAA-MM-DD.db` de volta para `data/invictus.db` e extraia `uploads-AAAA-MM-DD.tar.gz`.
+O script usa `pg_dump` (formato custom, comprimido) e um `.tar.gz` das fotos, guardando 14 dias em `/var/backups/invictus`.
 
-## 5. O que revisar manualmente
+Para restaurar:
+
+```bash
+PGPASSWORD=<senha> pg_restore -h localhost -U invictus_app -d invictus --clean --if-exists /var/backups/invictus/invictus-AAAA-MM-DD.dump
+tar -xzf /var/backups/invictus/uploads-AAAA-MM-DD.tar.gz -C /var/www/invictus
+```
+
+## 5. Checklist de segurança antes de ir ao ar
 
 - [ ] UFW ativo liberando apenas 22/80/443
 - [ ] SSH só com chave, root desabilitado, fail2ban ativo
-- [ ] `.env` com COOKIE_SECRET forte (não commite)
+- [ ] `POSTGRES_PASSWORD` e `COOKIE_SECRET` fortes e fora do git
+- [ ] `CORS_ORIGIN` com o domínio real (HTTPS)
 - [ ] HTTPS ativo e renovação do certificado no cron
-- [ ] No banco e nas pastas, apenas o usuário da aplicação tem acesso
-- [ ] Testar: login com senha errada 10× (deve bloquear), upload de arquivo `.exe` (deve recusar), acesso a `/api/admin/imoveis` sem login (deve dar 401)
+- [ ] Container do Postgres sem portas publicadas
+- [ ] Testes: login com senha errada 10× (bloqueio), upload de `.exe` (recusado), `/api/admin/imoveis` sem sessão (401), descrição com `<script>` (sanitizado)
